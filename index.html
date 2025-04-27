@@ -1,0 +1,131 @@
+# Criar o arquivo index.html
+cat > index.html << 'EOF'
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medicina e Inteligência Artificial</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Importar fontes Inter (opcional, pode usar sans-serif padrão) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <!-- Biblioteca para gerar PDF (html2pdf.js) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+
+    <button id="hamburger-button" aria-label="Abrir menu">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+    </button>
+
+    <nav id="side-menu-minimal">
+        <ul>
+            <li><a href="#" data-target="landing-page" class="nav-link active">Início</a></li>
+            <li><a href="#" data-target="search-section" class="nav-link">Busca</a></li>
+            <li><a href="#" data-target="favorites-section" class="nav-link">Favoritos</a></li>
+            <li><a href="#" data-target="alerts-section" class="nav-link">Alertas</a></li>
+            <li><a href="#" data-target="history-section" class="nav-link">Histórico</a></li>
+            <li><a href="#" data-target="settings-section" class="nav-link">Ajustes</a></li>
+        </ul>
+    </nav>
+
+    <div id="overlay-minimal"></div>
+
+    <main class="main-container">
+        <!-- Página Inicial -->
+        <section id="landing-page" class="content-section active-section">
+            <h1>Bem-vindo ao Medicina e Inteligência Artificial</h1>
+            <p>Sua plataforma minimalista para acompanhar as últimas publicações científicas sobre Inteligência Artificial aplicada à Medicina.</p>
+            <h2>O que você pode fazer:</h2>
+            <ul>
+                <li><strong>Buscar Artigos:</strong> Encontre as publicações mais recentes do PubMed (use "med IA" como busca padrão se o campo estiver vazio).</li>
+                <li><strong>Salvar Favoritos:</strong> Marque os artigos mais relevantes para acesso rápido.</li>
+                <li><strong>Criar Alertas:</strong> Salve palavras-chave para verificar manualmente novos artigos sobre seus tópicos de interesse.</li>
+                <li><strong>Consultar Histórico:</strong> Reveja suas buscas anteriores.</li>
+                <li><strong>Gerar Compilados:</strong> Crie relatórios curados (Top 5 com resumos) e salve em PDF ou copie o texto.</li>
+            </ul>
+            <p>Use o menu para navegar entre as seções.</p>
+        </section>
+
+        <!-- Seção de Busca -->
+        <section id="search-section" class="content-section">
+            <h2>Busca de Artigos</h2>
+            <div class="search-container form-group">
+                <label for="search-input" class="sr-only">Termos de busca</label>
+                <input type="search" id="search-input" placeholder="Buscar artigos no PubMed (padrão: med IA)">
+                <button id="search-button">Buscar</button>
+            </div>
+            <div class="form-group">
+                 <button id="compile-button" class="secondary-button">Gerar Compilado (Top 5)</button>
+            </div>
+            <div id="results-container">
+                <p class="info-message">Insira os termos e clique em Buscar (ou deixe vazio para buscar "med IA").</p>
+            </div>
+             <!-- Modal de compilação -->
+             <div id="compilation-modal" class="modal" style="display: none;">
+                 <div class="modal-content">
+                     <span class="close-button">&times;</span>
+                     <div id="compilation-content-wrapper"> <!-- Wrapper para PDF e Cópia -->
+                        <div id="compilation-content">
+                            <!-- Conteúdo dinâmico -->
+                        </div>
+                     </div>
+                     <button id="download-pdf-button">Download PDF</button>
+                     <button id="copy-report-button" class="secondary-button">Copiar Relatório</button>
+                 </div>
+             </div>
+        </section>
+
+        <!-- Seção de Favoritos -->
+        <section id="favorites-section" class="content-section">
+            <h2>Favoritos</h2>
+            <div id="favorites-list">
+                <p class="info-message">Nenhum artigo favoritado ainda.</p>
+            </div>
+        </section>
+
+        <!-- Seção de Alertas -->
+        <section id="alerts-section" class="content-section">
+            <h2>Gerenciar Alertas</h2>
+            <p>Salve palavras-chave para verificar manualmente novos artigos sobre seus tópicos de interesse.</p>
+            <div class="form-group">
+                <label for="alert-keywords">Novas Palavras-chave:</label>
+                <input type="text" id="alert-keywords" placeholder="Ex: machine learning radiology">
+            </div>
+            <button id="save-alert-button">Salvar Alerta</button>
+            <div id="alerts-list" style="margin-top: 20px;">
+                <h3>Alertas Salvos:</h3>
+                <!-- Lista de alertas salvos será exibida aqui -->
+                <p class="info-message">Nenhum alerta configurado.</p>
+            </div>
+        </section>
+
+        <!-- Seção de Histórico -->
+        <section id="history-section" class="content-section">
+            <h2>Histórico de Buscas</h2>
+            <div id="history-list">
+                <p class="info-message">Nenhuma busca realizada ainda.</p>
+            </div>
+            <button id="clear-history-button" class="secondary-button">Limpar Histórico</button>
+        </section>
+
+        <!-- Seção de Ajustes -->
+        <section id="settings-section" class="content-section">
+            <h2>Ajustes</h2>
+            <div class="setting-item">
+                <span>Modo Escuro</span>
+                <button id="settings-dark-mode-toggle" class="toggle-button" aria-label="Alternar modo escuro">
+                    <span class="toggle-knob"></span>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
+EOF
