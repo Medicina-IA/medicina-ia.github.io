@@ -1,4 +1,315 @@
-const abstractsMap = {};
+// Seletores
+const hamburgerButton = document.getElementById("hamburger-button");
+const sideMenu = document.getElementById("side-menu");
+const overlay = document.getElementById("overlay");
+const menuLinks = document.querySelectorAll(".nav-link");
+const contentSections = document.querySelectorAll(".content-section");
+const darkModeToggle = document.getElementById("dark-mode-toggle");
+const searchInput = document.getElementById("search-input");
+const searchButton = document.getElementById("search-button");
+const resultsContainer = document.getElementById("results-container");
+const favoritesList = document.getElementById("favorites-list");
+const historyList = document.getElementById("history-list");
+const clearHistoryButton = document.getElementById("clear-history-button");
+const compileButton = document.getElementById("compile-button");
+const compilationModal = document.getElementById("compilation-modal");
+const closeModalButton = compilationModal?.querySelector(".close-button");
+const compilationContent = document.getElementById("compilation-content");
+const downloadPdfButton = document.getElementById("download-pdf-button");
+const copyReportButton = document.getElementById("copy-report-button");
+const alertKeywordsInput = document.getElementById("alert-keywords");
+const saveAlertButton = document.getElementById("save-alert-button");
+const alertsListContainer = document.getElementById("alerts-list");
+
+// Estado da Aplicação
+let currentResults = [];
+let favorites = JSON.parse(localStorage.getItem("medIAFavorites")) || [];
+let searchHistory = JSON.parse(localStorage.getItem("medIASearchHistory")) || [];
+let savedAlerts = JSON.parse(localStorage.getItem("medIAAlerts")) || [];
+
+const PUBMED_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/";
+const MAX_RESULTS = 15;
+const DEFAULT_SEARCH_TERM = "med IA";
+
+// Funções do Menu
+function toggleMenu() {
+    console.log('Toggle menu clicked');
+    hamburgerButton.classList.toggle("open");
+    sideMenu.classList.toggle("open");
+    overlay.classList.toggle("visible");
+    document.body.style.overflow = sideMenu.classList.contains("open") ? "hidden" : "";
+}
+
+function closeMenu() {
+    hamburgerButton.classList.remove("open");
+    sideMenu.classList.remove("open");
+    overlay.classList.remove("visible");
+    document.body.style.overflow = "";
+}
+
+function showContentSection(targetId) {
+    contentSections.forEach(section => {
+        section.classList.remove("active-section");
+    });
+    const targetSection = document.getElementById(targetId);
+    if (targetSection) {
+        targetSection.classList.add("active-section");
+        window.scrollTo(0, 0);
+    }
+    menuLinks.forEach(link => {
+        link.classList.remove("active");
+        if (link.dataset.target === targetId) {
+            link.classList.add("active");
+        }
+    });
+    closeMenu();
+}
+
+// Funções de Busca
+async function performSearch(query) {
+    resultsContainer.innerHTML = '<p class="info-message">Buscando artigos...</p>';
+    currentResults = [];
+    const finalQuery = query.trim() === "" ? DEFAULT_SEARCH_TERM : query.trim();
+    
+    try {
+        const searchUrl = `${PUBMED_BASE_URL}esearch.fcgi?db=pubmed&term=${encodeURIComponent(finalQuery)}&retmax=${MAX_RESULTS}&retmode=json`;
+        const response = await fetch(searchUrl);
+        const data = await response.json();
+        
+        if (data.esearchresult && data.esearchresult.idlist && data.esearchresult.idlist.length > 0) {
+            const ids = data.esearchresult.idlist.join(",");
+            await fetchAndDisplaySummaries(ids);
+            saveSearchTerm(finalQuery);
+        } else {
+            resultsContainer.innerHTML = '<p class="info-message">Nenhum artigo encontrado para esta busca.</p>';
+        }
+    } catch (error) {
+        console.error("Erro ao buscar no PubMed:", error);
+        resultsContainer.innerHTML = '<p class="info-message">Erro ao buscar artigos. Tente novamente.</p>';
+    }
+}
+
+async function fetchAndDisplaySummaries(ids) {
+    try {
+        const summaryUrl = `${PUBMED_BASE_URL}esummary.fcgi?db=pubmed&id=${ids}&retmode=json`;
+        const response = await fetch(summaryUrl);
+        const data = await response.json();
+        
+        if (data.result) {
+            currentResults = processPubMedResults(data.result);
+            displayResults(currentResults);
+        }
+    } catch (error) {
+        console.error("Erro ao buscar resumos:", error);
+        resultsContainer.innerHTML = '<p class="info-message">Erro ao obter detalhes dos artigos.</p>';
+    }
+}
+
+function processPubMedResults(pubmedData) {
+    const uids = pubmedData.uids;
+    return uids.map(uid => {
+        const article = pubmedData[uid];
+        return {
+            id: uid,
+            title: article.title || "Título não disponível",
+            authors: article.authors ? article.authors.map(a => a.name).join(", ") : "Autores não disponíveis",
+            journal: article.source || "Journal não disponível",
+            pubDate: article.pubdate || "Data não disponível",
+            url: `https://pubmed.ncbi.nlm.nih.gov/${uid}/`,
+        };
+    });
+}
+
+function displayResults(results) {
+    if (!results || results.length === 0) {
+        resultsContainer.innerHTML = '<p class="info-message">Nenhum resultado para exibir.</p>';
+        return;
+    }
+    
+    resultsContainer.innerHTML = results.map(article => {
+        const isFavorite = favorites.some(fav => fav.id === article.id);
+        return `
+            <div class="result-item">
+                <h3>${article.title}</h3>
+                <p><strong>Autores:</strong> ${article.authors}</p>
+                <p><strong>Journal:</strong> ${article.journal} (${article.pubDate})</p>
+                <a href="${article.url}" target="_blank" rel="noopener noreferrer">Ver no PubMed</a>
+                <button class="favorite-button ${isFavorite ? "active" : ""}" data-id="${article.id}">
+                    ${isFavorite ? "Remover Favorito" : "Favoritar"}
+                </button>
+            </div>
+        `;
+    }).join("");
+    
+    addFavoriteButtonListeners();
+}
+
+// Funções de Favoritos
+function toggleFavorite(articleId) {
+    const articleIndex = favorites.findIndex(fav => fav.id === articleId);
+    
+    if (articleIndex > -1) {
+        favorites.splice(articleIndex, 1);
+    } else {
+        const article = currentResults.find(res => res.id === articleId);
+        if (article) favorites.push(article);
+    }
+    
+    localStorage.setItem("medIAFavorites", JSON.stringify(favorites));
+    
+    if (document.getElementById("favorites-section").classList.contains("active-section")) {
+        displayFavorites();
+    }
+    
+    updateFavoriteButtonState(articleId);
+}
+
+function displayFavorites() {
+    if (favorites.length === 0) {
+        favoritesList.innerHTML = '<p class="info-message">Nenhum artigo favoritado ainda.</p>';
+        return;
+    }
+    
+    favoritesList.innerHTML = favorites.map(article => `
+        <div class="result-item list-item">
+            <div>
+                <h3>${article.title}</h3>
+                <p>${article.authors} - ${article.journal} (${article.pubDate})</p>
+                <a href="${article.url}" target="_blank" rel="noopener noreferrer">Ver no PubMed</a>
+            </div>
+            <button class="secondary-button" data-id="${article.id}">Remover</button>
+        </div>
+    `).join("");
+    
+    document.querySelectorAll("#favorites-list button").forEach(button => {
+        button.addEventListener("click", () => toggleFavorite(button.dataset.id));
+    });
+}
+
+function addFavoriteButtonListeners() {
+    document.querySelectorAll(".favorite-button").forEach(button => {
+        button.addEventListener("click", () => toggleFavorite(button.dataset.id));
+    });
+}
+
+function updateFavoriteButtonState(articleId) {
+    const button = resultsContainer.querySelector(`.favorite-button[data-id="${articleId}"]`);
+    if (button) {
+        const isFavorite = favorites.some(fav => fav.id === articleId);
+        button.textContent = isFavorite ? "Remover Favorito" : "Favoritar";
+        button.classList.toggle("active", isFavorite);
+    }
+}
+
+// Funções de Histórico
+function saveSearchTerm(term) {
+    searchHistory = searchHistory.filter(item => item !== term);
+    searchHistory.unshift(term);
+    if (searchHistory.length > 20) searchHistory.pop();
+    localStorage.setItem("medIASearchHistory", JSON.stringify(searchHistory));
+    displayHistory();
+}
+
+function displayHistory() {
+    if (searchHistory.length === 0) {
+        historyList.innerHTML = '<p class="info-message">Nenhuma busca realizada ainda.</p>';
+        return;
+    }
+    
+    historyList.innerHTML = searchHistory.map(term => `
+        <div class="list-item">
+            <span>${term}</span>
+            <button class="secondary-button" data-term="${term}">Buscar Novamente</button>
+        </div>
+    `).join("");
+    
+    document.querySelectorAll("#history-list button").forEach(button => {
+        button.addEventListener("click", () => {
+            const term = button.dataset.term;
+            searchInput.value = term;
+            showContentSection("search-section");
+            performSearch(term);
+        });
+    });
+}
+
+function clearHistory() {
+    searchHistory = [];
+    localStorage.removeItem("medIASearchHistory");
+    displayHistory();
+}
+
+// Funções de Alertas
+function saveAlert() {
+    const keywords = alertKeywordsInput.value.trim();
+    if (keywords && !savedAlerts.includes(keywords)) {
+        savedAlerts.push(keywords);
+        localStorage.setItem("medIAAlerts", JSON.stringify(savedAlerts));
+        alertKeywordsInput.value = "";
+        displayAlerts();
+    }
+}
+
+function deleteAlert(keywords) {
+    savedAlerts = savedAlerts.filter(item => item !== keywords);
+    localStorage.setItem("medIAAlerts", JSON.stringify(savedAlerts));
+    displayAlerts();
+}
+
+function displayAlerts() {
+    const alertsList = alertsListContainer.querySelector("p.info-message")?.parentElement || alertsListContainer;
+    
+    if (savedAlerts.length === 0) {
+        alertsList.innerHTML = '<h3>Alertas Salvos:</h3><p class="info-message">Nenhum alerta configurado.</p>';
+        return;
+    }
+    
+    alertsList.innerHTML = '<h3>Alertas Salvos:</h3>' + savedAlerts.map(keywords => `
+        <div class="list-item">
+            <span>${keywords}</span>
+            <div>
+                <button class="secondary-button" data-keywords="${keywords}">Verificar Agora</button>
+                <button class="secondary-button" data-delete="${keywords}">Remover</button>
+            </div>
+        </div>
+    `).join("");
+    
+    document.querySelectorAll("#alerts-list button[data-keywords]").forEach(button => {
+        button.addEventListener("click", () => {
+            const keywords = button.dataset.keywords;
+            searchInput.value = keywords;
+            showContentSection("search-section");
+            performSearch(keywords);
+        });
+    });
+    
+    document.querySelectorAll("#alerts-list button[data-delete]").forEach(button => {
+        button.addEventListener("click", () => deleteAlert(button.dataset.delete));
+    });
+}
+
+// Funções de Compilação
+async function generateCompilation() {
+    if (currentResults.length === 0) {
+        alert("Realize uma busca primeiro para gerar um compilado.");
+        return;
+    }
+    
+    const top5Results = currentResults.slice(0, 5);
+    compilationContent.innerHTML = '<p class="info-message">Buscando resumos para o Top 5...</p>';
+    compilationModal.style.display = "block";
+    document.body.style.overflow = "hidden";
+    
+    try {
+        const ids = top5Results.map(article => article.id).join(",");
+        const fetchUrl = `${PUBMED_BASE_URL}efetch.fcgi?db=pubmed&id=${ids}&retmode=xml&rettype=abstract`;
+        const response = await fetch(fetchUrl);
+        const xmlText = await response.text();
+        
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+        
+        const abstractsMap = {};
         const pubmedArticles = xmlDoc.getElementsByTagName("PubmedArticle");
         
         for (let item of pubmedArticles) {
@@ -91,24 +402,31 @@ function copyReportToClipboard() {
     });
 }
 
+// Funções de Ajustes
 function applyDarkModePreference() {
     const isDark = localStorage.getItem("medIADarkMode") === "true";
     document.body.classList.toggle("dark-mode", isDark);
-    darkModeToggle.classList.toggle("active", isDark);
+    darkModeToggle?.classList.toggle("active", isDark);
 }
 
 function toggleDarkMode() {
     const isDark = document.body.classList.toggle("dark-mode");
-    darkModeToggle.classList.toggle("active", isDark);
+    darkModeToggle?.classList.toggle("active", isDark);
     localStorage.setItem("medIADarkMode", isDark);
 }
 
+// Event Listeners
 document.addEventListener("DOMContentLoaded", () => {
     applyDarkModePreference();
     showContentSection("landing-page");
     
-    hamburgerButton.addEventListener("click", toggleMenu);
-    overlay.addEventListener("click", closeMenu);
+    if (hamburgerButton) {
+        hamburgerButton.addEventListener("click", toggleMenu);
+    }
+    
+    if (overlay) {
+        overlay.addEventListener("click", closeMenu);
+    }
     
     menuLinks.forEach(link => {
         link.addEventListener("click", (e) => {
@@ -120,23 +438,47 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
     
-    searchButton.addEventListener("click", () => performSearch(searchInput.value));
-    searchInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") performSearch(searchInput.value);
-    });
+    if (searchButton) {
+        searchButton.addEventListener("click", () => performSearch(searchInput.value));
+    }
     
-    compileButton.addEventListener("click", generateCompilation);
-    closeModalButton.addEventListener("click", closeCompilationModal);
-    downloadPdfButton.addEventListener("click", downloadReportAsPDF);
-    copyReportButton.addEventListener("click", copyReportToClipboard);
+    if (searchInput) {
+        searchInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") performSearch(searchInput.value);
+        });
+    }
+    
+    if (compileButton) {
+        compileButton.addEventListener("click", generateCompilation);
+    }
+    
+    if (closeModalButton) {
+        closeModalButton.addEventListener("click", closeCompilationModal);
+    }
+    
+    if (downloadPdfButton) {
+        downloadPdfButton.addEventListener("click", downloadReportAsPDF);
+    }
+    
+    if (copyReportButton) {
+        copyReportButton.addEventListener("click", copyReportToClipboard);
+    }
     
     window.addEventListener("click", (e) => {
         if (e.target === compilationModal) closeCompilationModal();
     });
     
-    clearHistoryButton.addEventListener("click", clearHistory);
-    saveAlertButton.addEventListener("click", saveAlert);
-    darkModeToggle.addEventListener("click", toggleDarkMode);
+    if (clearHistoryButton) {
+        clearHistoryButton.addEventListener("click", clearHistory);
+    }
+    
+    if (saveAlertButton) {
+        saveAlertButton.addEventListener("click", saveAlert);
+    }
+    
+    if (darkModeToggle) {
+        darkModeToggle.addEventListener("click", toggleDarkMode);
+    }
     
     let touchStartX = 0;
     document.addEventListener('touchstart', e => {
