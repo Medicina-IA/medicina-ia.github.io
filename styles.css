@@ -1,3 +1,33 @@
+.site-logo {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 150px;
+    height: auto;
+    z-index: 1000;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Ajustes para mobile */
+@media (max-width: 768px) {
+    .site-logo {
+        width: 100px;
+        top: 10px;
+        right: 10px;
+    }
+    
+    .main-container {
+        padding-top: 80px; /* Aumentar o padding para dar espaço para a logo */
+    }
+}
+
+/* Ajuste para modo escuro */
+body.dark-mode .site-logo {
+    opacity: 0.9;
+    filter: brightness(0.9);
+}
+
 * {
     margin: 0;
     padding: 0;
