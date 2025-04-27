@@ -1,155 +1,158 @@
-// Fecha o menu ao clicar em qualquer link
-menuLinks.forEach(link => {
-    link.addEventListener("click", (event) => {
-        event.preventDefault();
-        const targetId = link.dataset.target;
-        showContentSection(targetId);
-        closeMenu(); // Fecha o menu em dispositivos móveis
-    });
-});
-
-// Evita scroll no body quando o menu está aberto
-function toggleMenu() {
-    hamburgerButton.classList.toggle("open");
-    sideMenu.classList.toggle("open");
-    overlay.classList.toggle("visible");
-    
-    // Previne scroll no body
-    if (sideMenu.classList.contains("open")) {
-        document.body.style.overflow = "hidden";
-    } else {
-        document.body.style.overflow = "";
-    }
-}
-
-// Evita scroll no body quando o menu está aberto
-function toggleMenu() {
-    hamburgerButton.classList.toggle("open");
-    sideMenu.classList.toggle("open");
-    overlay.classList.toggle("visible");
-    // Previne scroll no body
-    if (sideMenu.classList.contains("open")) {
-        document.body.style.overflow = "hidden";
-    } else {
-        document.body.style.overflow = "";
-    }
-}
-
-// Corrige scroll em dispositivos móveis
-function showContentSection(targetId) {
-    contentSections.forEach(section => {
-        section.classList.remove("active-section");
-    });
-    const targetSection = document.getElementById(targetId);
-    if (targetSection) {
-        targetSection.classList.add("active-section");
-        // Garante que o scroll volta ao topo
-        window.scrollTo(0, 0);
-    }
-    menuLinks.forEach(link => {
-        link.classList.remove("active");
-        if (link.dataset.target === targetId) {
-            link.classList.add("active");
+const abstractsMap = {};
+        const pubmedArticles = xmlDoc.getElementsByTagName("PubmedArticle");
+        
+        for (let item of pubmedArticles) {
+            const pmidElement = item.querySelector("MedlineCitation > PMID");
+            const abstractElements = item.querySelectorAll("Article > Abstract > AbstractText");
+            
+            if (pmidElement) {
+                let abstractText = "Resumo não disponível.";
+                if (abstractElements.length > 0) {
+                    abstractText = Array.from(abstractElements)
+                        .map(el => el.textContent)
+                        .join(" ");
+                }
+                abstractsMap[pmidElement.textContent] = abstractText;
+            }
         }
-    });
-    closeMenu(); // Fecha menu em mobile
-}
-
-// Adiciona melhor suporte para touch em dispositivos móveis
-if ('ontouchstart' in window) {
-    document.body.classList.add('touch-device');
-}
-
-// Melhora o feedback visual para botões em touch
-document.querySelectorAll('button').forEach(button => {
-    button.addEventListener('touchstart', () => {
-        button.classList.add('button-active');
-    });
-    button.addEventListener('touchend', () => {
-        button.classList.remove('button-active');
-    });
-});
-
-// Otimiza a busca para mobile
-const handleSearch = () => {
-    if (searchInput.value.trim() !== '') {
-        performSearch(searchInput.value);
-    } else {
-        performSearch(DEFAULT_SEARCH_TERM);
+        
+        let contentHTML = `<h2>Top 5 Artigos com Resumos</h2>`;
+        contentHTML += `<p><strong>Busca realizada em:</strong> ${new Date().toLocaleString('pt-BR')}</p>`;
+        
+        top5Results.forEach(article => {
+            contentHTML += `
+                <div class="compilation-item">
+                    <h3>${article.title}</h3>
+                    <p><strong>Autores:</strong> ${article.authors}</p>
+                    <p><strong>Revista:</strong> ${article.journal} (${article.pubDate})</p>
+                    <p><strong>Resumo:</strong><br/>${abstractsMap[article.id] || 'Resumo não disponível.'}</p>
+                    <p><a href="${article.url}" target="_blank" rel="noopener noreferrer">Ver no PubMed</a></p>
+                </div>
+            `;
+        });
+        
+        compilationContent.innerHTML = contentHTML;
+    } catch (error) {
+        console.error("Erro ao gerar compilado:", error);
+        compilationContent.innerHTML = '<p class="info-message">Erro ao buscar resumos. Tente novamente.</p>';
     }
-};
-
-// Ajusta o modal para mobile
-function showModal() {
-    compilationModal.style.display = "block";
-    document.body.style.overflow = "hidden"; // Previne scroll no background
 }
 
 function closeCompilationModal() {
     compilationModal.style.display = "none";
-    document.body.style.overflow = ""; // Restaura scroll
+    document.body.style.overflow = "";
 }
 
-// Otimiza o download de PDF para mobile
 function downloadReportAsPDF() {
-    const element = compilationContentWrapper;
-    if (!element || !compilationContent.innerHTML || compilationContent.querySelector('.loading-indicator') || compilationContent.querySelector('.error-message')) {
+    const element = compilationContent;
+    if (!element || !element.innerHTML) {
         alert("Gere um relatório válido antes de tentar fazer o download.");
         return;
     }
-    const searchTerm = searchInput.value.trim() || DEFAULT_SEARCH_TERM;
-    const filename = `relatorio_med_ia_${searchTerm.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`;
+    
     const opt = {
-        margin: [0.5, 0.5], // Melhores margens para mobile
-        filename: filename,
+        margin: [0.5, 0.5],
+        filename: `relatorio_med_ia_${new Date().toISOString().slice(0,10)}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
+    
     downloadPdfButton.disabled = true;
     downloadPdfButton.textContent = "Gerando PDF...";
+    
     html2pdf().set(opt).from(element).save().then(() => {
         downloadPdfButton.disabled = false;
         downloadPdfButton.textContent = "Download PDF";
     }).catch(err => {
         console.error("Erro ao gerar PDF:", err);
-        alert("Ocorreu um erro ao gerar o PDF. Tente novamente.");
+        alert("Erro ao gerar o PDF. Tente novamente.");
         downloadPdfButton.disabled = false;
         downloadPdfButton.textContent = "Download PDF";
     });
 }
 
-// Adiciona suporte a gesture
-let touchStartX = 0;
-let touchEndX = 0;
-
-document.addEventListener('touchstart', e => {
-    touchStartX = e.changedTouches[0].screenX;
-});
-
-document.addEventListener('touchend', e => {
-    touchEndX = e.changedTouches[0].screenX;
-    handleSwipe();
-});
-
-function handleSwipe() {
-    const swipeThreshold = 50;
-    const diff = touchEndX - touchStartX;
-    
-    if (Math.abs(diff) > swipeThreshold) {
-        if (diff > 0 && !sideMenu.classList.contains('open')) {
-            // Swipe right - open menu
-            toggleMenu();
-        } else if (diff < 0 && sideMenu.classList.contains('open')) {
-            // Swipe left - close menu
-            toggleMenu();
-        }
+function copyReportToClipboard() {
+    const content = compilationContent.innerText;
+    if (!content) {
+        alert("Gere um relatório válido antes de tentar copiar.");
+        return;
     }
-}
-
-// Ajusta o viewport para teclado virtual em mobile
-if ('visualViewport' in window) {
-    window.visualViewport.addEventListener('resize', () => {
-        document.documentElement.style.height = `${window.visualViewport.height}px`;
+    
+    navigator.clipboard.writeText(content).then(() => {
+        const originalText = copyReportButton.textContent;
+        copyReportButton.textContent = "Copiado!";
+        setTimeout(() => {
+            copyReportButton.textContent = originalText;
+        }, 2000);
+    }).catch(err => {
+        console.error('Erro ao copiar:', err);
+        alert('Não foi possível copiar o relatório.');
     });
 }
+
+function applyDarkModePreference() {
+    const isDark = localStorage.getItem("medIADarkMode") === "true";
+    document.body.classList.toggle("dark-mode", isDark);
+    darkModeToggle.classList.toggle("active", isDark);
+}
+
+function toggleDarkMode() {
+    const isDark = document.body.classList.toggle("dark-mode");
+    darkModeToggle.classList.toggle("active", isDark);
+    localStorage.setItem("medIADarkMode", isDark);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    applyDarkModePreference();
+    showContentSection("landing-page");
+    
+    hamburgerButton.addEventListener("click", toggleMenu);
+    overlay.addEventListener("click", closeMenu);
+    
+    menuLinks.forEach(link => {
+        link.addEventListener("click", (e) => {
+            e.preventDefault();
+            showContentSection(link.dataset.target);
+            if (link.dataset.target === "favorites-section") displayFavorites();
+            if (link.dataset.target === "history-section") displayHistory();
+            if (link.dataset.target === "alerts-section") displayAlerts();
+        });
+    });
+    
+    searchButton.addEventListener("click", () => performSearch(searchInput.value));
+    searchInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") performSearch(searchInput.value);
+    });
+    
+    compileButton.addEventListener("click", generateCompilation);
+    closeModalButton.addEventListener("click", closeCompilationModal);
+    downloadPdfButton.addEventListener("click", downloadReportAsPDF);
+    copyReportButton.addEventListener("click", copyReportToClipboard);
+    
+    window.addEventListener("click", (e) => {
+        if (e.target === compilationModal) closeCompilationModal();
+    });
+    
+    clearHistoryButton.addEventListener("click", clearHistory);
+    saveAlertButton.addEventListener("click", saveAlert);
+    darkModeToggle.addEventListener("click", toggleDarkMode);
+    
+    let touchStartX = 0;
+    document.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
+    });
+    
+    document.addEventListener('touchend', e => {
+        const touchEndX = e.changedTouches[0].screenX;
+        const diff = touchEndX - touchStartX;
+        
+        if (Math.abs(diff) > 50) {
+            if (diff > 0 && !sideMenu.classList.contains('open')) {
+                toggleMenu();
+            } else if (diff < 0 && sideMenu.classList.contains('open')) {
+                toggleMenu();
+            }
+        }
+    });
+});
