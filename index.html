@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
@@ -21,12 +22,13 @@
 
     <nav id="side-menu">
         <ul>
-            <li><a href="#" data-target="landing-page" class="nav-link active">Início</a></li>
-            <li><a href="#" data-target="search-section" class="nav-link">Busca</a></li>
-            <li><a href="#" data-target="favorites-section" class="nav-link">Favoritos</a></li>
-            <li><a href="#" data-target="alerts-section" class="nav-link">Alertas</a></li>
-            <li><a href="#" data-target="history-section" class="nav-link">Histórico</a></li>
-            <li><a href="#" data-target="settings-section" class="nav-link">Ajustes</a></li>
+            <li><a href="#" data-target="landing-page" class="nav-link active"><i class="fas fa-home"></i> Início</a></li>
+            <li><a href="#" data-target="search-section" class="nav-link"><i class="fas fa-search"></i> Busca</a></li>
+            <li><a href="#" data-target="favorites-section" class="nav-link"><i class="fas fa-heart"></i> Favoritos</a></li>
+            <li><a href="#" data-target="alerts-section" class="nav-link"><i class="fas fa-bell"></i> Alertas</a></li>
+            <li><a href="#" data-target="history-section" class="nav-link"><i class="fas fa-history"></i> Histórico</a></li>
+            <li><a href="#" data-target="stats-section" class="nav-link"><i class="fas fa-chart-bar"></i> Estatísticas</a></li>
+            <li><a href="#" data-target="settings-section" class="nav-link"><i class="fas fa-cog"></i> Ajustes</a></li>
         </ul>
     </nav>
 
@@ -51,10 +53,10 @@
             <h2>Busca de Artigos</h2>
             <div class="search-container form-group">
                 <input type="search" id="search-input" placeholder="Buscar artigos no PubMed (padrão: med IA)">
-                <button id="search-button">Buscar</button>
+                <button id="search-button"><i class="fas fa-search"></i> Buscar</button>
             </div>
             <div class="form-group">
-                <button id="compile-button" class="secondary-button">Gerar Compilado (Top 5)</button>
+                <button id="compile-button" class="secondary-button"><i class="fas fa-file-pdf"></i> Gerar Compilado (Top 5)</button>
             </div>
             <div id="results-container">
                 <p class="info-message">Insira os termos e clique em Buscar (ou deixe vazio para buscar "med IA").</p>
@@ -64,8 +66,8 @@
                     <span class="close-button">&times;</span>
                     <div id="compilation-content"></div>
                     <div class="modal-buttons">
-                        <button id="download-pdf-button">Download PDF</button>
-                        <button id="copy-report-button" class="secondary-button">Copiar Relatório</button>
+                        <button id="download-pdf-button"><i class="fas fa-download"></i> Download PDF</button>
+                        <button id="copy-report-button" class="secondary-button"><i class="fas fa-copy"></i> Copiar Relatório</button>
                     </div>
                 </div>
             </div>
@@ -85,7 +87,7 @@
                 <label for="alert-keywords">Novas Palavras-chave:</label>
                 <input type="text" id="alert-keywords" placeholder="Ex: machine learning radiology">
             </div>
-            <button id="save-alert-button">Salvar Alerta</button>
+            <button id="save-alert-button"><i class="fas fa-plus"></i> Salvar Alerta</button>
             <div id="alerts-list">
                 <h3>Alertas Salvos:</h3>
                 <p class="info-message">Nenhum alerta configurado.</p>
@@ -97,7 +99,55 @@
             <div id="history-list">
                 <p class="info-message">Nenhuma busca realizada ainda.</p>
             </div>
-            <button id="clear-history-button" class="secondary-button">Limpar Histórico</button>
+            <button id="clear-history-button" class="secondary-button"><i class="fas fa-trash"></i> Limpar Histórico</button>
+        </section>
+
+        <section id="stats-section" class="content-section">
+            <h2>Estatísticas de Uso</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="total-searches">0</h3>
+                        <p>Buscas Realizadas</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="total-favorites">0</h3>
+                        <p>Artigos Favoritados</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="total-alerts">0</h3>
+                        <p>Alertas Configurados</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="total-reports">0</h3>
+                        <p>Relatórios Gerados</p>
+                    </div>
+                </div>
+            </div>
+            <div class="stats-chart">
+                <h3>Buscas por Dia (Últimos 7 dias)</h3>
+                <div id="searches-chart" class="chart-container">
+                    <p class="info-message">Nenhuma busca realizada ainda.</p>
+                </div>
+            </div>
         </section>
 
         <section id="settings-section" class="content-section">
